@@ -19,11 +19,12 @@ import normalizeChildren from '../../utils/normalizeChildren';
 import type { EventProps } from './eventProps';
 
 export type Viewport = {|
-  latitude: number,
-  longitude: number,
-  zoom: number,
+  latitude?: number,
+  longitude?: number,
+  zoom?: number,
   pitch?: number,
-  bearing?: number
+  bearing?: number,
+  bounds?: number[][],
 |};
 
 export const jumpTo = 'jumpTo';
@@ -57,13 +58,16 @@ type Props = EventProps & {
   accessToken?: string,
 
   /** The longitude of the center of the map. */
-  longitude: number,
+  longitude?: number,
 
   /** The latitude of the center of the map. */
-  latitude: number,
+  latitude?: number,
 
   /** The tile zoom level of the map. */
-  zoom: number,
+  zoom?: number,
+
+  /** Alternatively, the bounds of the map. Overrides lat/lng + zoom */
+  bounds?: number[][],
 
   /** Specify the bearing of the viewport */
   bearing?: number,
@@ -305,8 +309,9 @@ class MapGL extends PureComponent<Props, State> {
       container,
       style: this.props.mapStyle,
       interactive: !!this.props.onViewportChange,
-      center: [this.props.longitude, this.props.latitude],
-      zoom: this.props.zoom,
+      ...(this.props.longitude && this.props.latitude && { center: [this.props.longitude, this.props.latitude] }),
+      ...(this.props.zoom && { zoom: this.props.zoom }),
+      ...(this.props.bounds && { bounds: this.props.bounds }),
       pitch: this.props.pitch,
       bearing: this.props.bearing,
       minZoom: this.props.minZoom,
@@ -423,7 +428,9 @@ class MapGL extends PureComponent<Props, State> {
     const center = map.getCenter();
 
     const viewportChanged =
-      (newProps.latitude !== prevProps.latitude &&
+    (newProps.bounds !== prevProps.bounds &&
+      newProps.bounds !== map.getBounds()) ||
+    (newProps.latitude !== prevProps.latitude &&
         newProps.latitude !== center.lat) ||
       (newProps.longitude !== prevProps.longitude &&
         newProps.longitude !== center.lng) ||
@@ -440,6 +447,7 @@ class MapGL extends PureComponent<Props, State> {
     const viewport = {
       center: [newProps.longitude, newProps.latitude],
       zoom: newProps.zoom,
+      bounds: newProps.bounds,
       pitch: newProps.pitch,
       bearing: newProps.bearing
     };
